@@ -54,6 +54,21 @@ module thymesisflow_llc_parser (
 
 ) ;
 
+ila_256 ILA_thymesisflow_llc_parser_in(
+.clk(clock),
+.probe0(fifo_in_tdata),
+.probe1(fifo_in_tvalid),
+.probe2(stall_parser)
+);
+
+ila_256 ILA_thymesisflow_llc_parser_out(
+.clk(clock),
+.probe0(fifo_out_tdata),
+.probe1(fifo_out_tvalid),
+.probe2(fifo_out_tready)
+);
+
+
 reg [31:0]  parser_flit_counter;
 reg [31:0]  parser_frame_counter;
 

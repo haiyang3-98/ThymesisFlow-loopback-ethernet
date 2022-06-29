@@ -196,7 +196,6 @@ module oc_function (
   ,input        f1_octrl00_metadata_supported  
   ,input [11:0] f1_octrl00_actag_len_supported
 
-`ifndef TFLOOPBACK
    //QSFP GTY FPGA pins and reference clock coming from top and constraints file
   ,input              serdes_init_clock
   ,input              qsfp0_ref_clk_n
@@ -211,7 +210,6 @@ module oc_function (
   ,input  [0:3]       qsfp1_rx_p
   ,output [0:3]       qsfp1_tx_n
   ,output [0:3]       qsfp1_tx_p
-`endif
 
 );
 

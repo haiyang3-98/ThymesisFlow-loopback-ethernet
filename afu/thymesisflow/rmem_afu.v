@@ -265,8 +265,11 @@ parameter FIFO_THRES = 11'h14;//20 resp flits threshold
 wire           ncff_cmd_tready;// When 1, increment read FIFO pointer to present the next FIFO entry
 wire  [162:0]  ncff_cmd_tdata;
 wire           ncff_cmd_tvalid;  
-wire           reset_n;
-assign         reset_n = ~reset;
+
+reg           reset_n;
+always @(posedge(clock)) begin
+    reset_n = ~reset;
+end         
 
 wire           cmddata_fifo_tready;
 wire   [512:0] cmddata_fifo_tdata;     
@@ -346,7 +349,6 @@ thymesisflow_top TF_TOP (
 
 `endif
 
-`ifndef TFLOOPBACK
      // QSFP0 external FPGA pins
       ,.qsfp0_ref_clk_n                         (qsfp0_ref_clk_n                 )
       ,.qsfp0_ref_clk_p                         (qsfp0_ref_clk_p                 ) 
@@ -364,7 +366,6 @@ thymesisflow_top TF_TOP (
       ,.qsfp1_rx_p                              (qsfp1_rx_p                      )
       ,.qsfp1_tx_n                              (qsfp1_tx_n                      )
       ,.qsfp1_tx_p                              (qsfp1_tx_p                      )
-`endif
 
      );
  

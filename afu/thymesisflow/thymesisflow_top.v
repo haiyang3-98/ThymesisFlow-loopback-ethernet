@@ -78,7 +78,7 @@ module thymesisflow_top  (
       , input  [11:0]      active_actag
       //mem mode rty timeout in case of rty cmd responses
       , input  [35:0]      rty_timeout
-`ifndef TFLOOPBACK
+
       // QSFP0 external FPGA pins
       , input              qsfp0_ref_clk_n 
       , input              qsfp0_ref_clk_p 
@@ -93,9 +93,31 @@ module thymesisflow_top  (
       , input  [0:3]       qsfp1_rx_p
       , output [0:3]       qsfp1_tx_n
       , output [0:3]       qsfp1_tx_p     
-`endif
 
 );
+
+ila_256 ila_ocx_tlx_cmd_flit_in(
+.clk(clock),
+.probe0(ocx_tlx_cmd_flit_in_tdata),
+.probe1(ocx_tlx_cmd_flit_in_tvalid),
+.probe2(ocx_tlx_cmd_flit_in_tready)
+);
+
+ila_512 ila_ocx_tlx_cmddata_flit_in(
+.clk(clock),
+.probe0(ocx_tlx_cmddata_flit_in_tdata),
+.probe1(ocx_tlx_cmddata_flit_in_tvalid),
+.probe2(ocx_tlx_cmddata_flit_in_tready)
+);
+
+ila_512 ila_ocx_tlx_resp(
+.clk(clock),
+.probe0(ocx_tlx_resp_tdata[511:0]),
+.probe1(ocx_tlx_resp_tvalid),
+.probe2(ocx_tlx_resp_tresp)
+);
+
+
 
 wire           qsfp0_usr_clk;
 wire           qsfp1_usr_clk;
@@ -162,12 +184,55 @@ wire  [255:0]  qsfp0_rx_tdata;
 wire  [31:0]   qsfp0_rx_tkeep;
 wire           qsfp0_rx_tvalid;
 wire           qsfp0_rx_tlast;
+wire           qsfp0_rx_tuser;
 wire  [255:0]  qsfp0_tx_tdata;
 wire  [31:0]   qsfp0_tx_tkeep;
 wire           qsfp0_tx_tvalid;
 wire           qsfp0_tx_tlast;
 wire           qsfp0_tx_tready;
 wire           qsfp0_power_on_rpb;
+
+//QSFP0 eth 512b interface wires
+wire  [511:0]  qsfp0_512_rx_tdata;
+wire  [63:0]   qsfp0_512_rx_tkeep;
+wire           qsfp0_512_rx_tvalid;
+wire           qsfp0_512_rx_tlast;
+wire           qsfp0_512_rx_tuser;
+
+wire  [511:0]  qsfp0_512_eth_rx_tdata;
+wire  [63:0]   qsfp0_512_eth_rx_tkeep;
+wire           qsfp0_512_eth_rx_tvalid;
+wire           qsfp0_512_eth_rx_tlast;
+wire           qsfp0_512_eth_rx_tuser;
+
+
+wire  [511:0]  qsfp0_512_tx_tdata;
+wire  [63:0]   qsfp0_512_tx_tkeep;
+wire           qsfp0_512_tx_tvalid;
+wire           qsfp0_512_tx_tlast;
+wire           qsfp0_512_tx_tready;
+ 
+//QSFP1 eth 512b interface wires
+wire  [511:0]  qsfp1_512_rx_tdata;
+wire  [63:0]   qsfp1_512_rx_tkeep;
+wire           qsfp1_512_rx_tvalid;
+wire           qsfp1_512_rx_tlast;
+wire           qsfp1_512_rx_tuser;
+
+wire  [511:0]  qsfp1_512_eth_rx_tdata;
+wire  [63:0]   qsfp1_512_eth_rx_tkeep;
+wire           qsfp1_512_eth_rx_tvalid;
+wire           qsfp1_512_eth_rx_tlast;
+wire           qsfp1_512_eth_rx_tuser;
+
+
+wire  [511:0]  qsfp1_512_tx_tdata;
+wire  [63:0]   qsfp1_512_tx_tkeep;
+wire           qsfp1_512_tx_tvalid;
+wire           qsfp1_512_tx_tlast;
+wire           qsfp1_512_tx_tready;
+ 
+
 //QSFP1 interface wires
 wire           qsfp1_channel_up;
 wire           qsfp1_crc_ok;
@@ -177,6 +242,8 @@ wire  [255:0]  qsfp1_rx_tdata;
 wire  [31:0]   qsfp1_rx_tkeep;
 wire           qsfp1_rx_tvalid;
 wire           qsfp1_rx_tlast;
+wire           qsfp1_rx_tuser;
+
 wire  [255:0]  qsfp1_tx_tdata;
 wire  [31:0]   qsfp1_tx_tkeep;
 wire           qsfp1_tx_tvalid;
@@ -325,6 +392,18 @@ wire [1:0] c_arb_req_mem_ingr;
 wire       c_arb_req_nxt_mem_ingr;
 wire [1:0] c_arb_sel_mem_ingr;
 
+wire [47:0] comp_mac   = 48'h02_00_00_00_00_00;
+wire [47:0] mem_mac   = 48'h02_00_00_00_00_01;
+wire [47:0] ethertype   = 32'hFF_FF_FF_FF;
+
+wire [47:0] qsfp0_rx_src_mac   ;
+wire [47:0] qsfp0_rx_dest_mac  ;
+wire [47:0] qsfp1_rx_src_mac ;
+wire [47:0] qsfp1_rx_dest_mac  ;
+
+wire qsfp0_mac_match = (qsfp0_rx_src_mac == mem_mac) && (qsfp0_rx_dest_mac == comp_mac);
+wire qsfp1_mac_match = (qsfp1_rx_src_mac == comp_mac) && (qsfp1_rx_dest_mac == mem_mac);
+
 
 
 //disable credit manager ports that are not used
@@ -390,8 +469,16 @@ thymesisflow_64B_compute_egress_adapter TF_COMPUTE_EGRESS_ADAPTER (
 
        );
 
-  `ifndef TFLOOPBACK
-thymesisflow_64B_32B_routing_egress TF_COMPUTE_ROUTING_EGR
+ila_512 ila_TF_COMPUTE_ROUTING_EGR(
+.clk(clock),
+
+
+.probe0(ocx_compute_netflit_out_tdata),
+.probe1(ocx_compute_netflit_out_tvalid),
+.probe2(ocx_compute_netflit_out_tready)
+);
+
+ thymesisflow_64B_32B_routing_egress TF_COMPUTE_ROUTING_EGR
       (
 
          .clock                     (clock)                   
@@ -401,13 +488,13 @@ thymesisflow_64B_32B_routing_egress TF_COMPUTE_ROUTING_EGR
         ,.egr_route_in_tvalid        (ocx_compute_netflit_out_tvalid)
         ,.egr_route_in_tready        (ocx_compute_netflit_out_tready)
 
-        ,.egr_route_out_tdata0       (egr_out_tdata0)
-        ,.egr_route_out_tvalid0      (egr_out_tvalid0)
-        ,.egr_route_out_tready0      (egr_out_tready0)
+        ,.egr_route_out_tdata0       ()
+        ,.egr_route_out_tvalid0      ()
+        ,.egr_route_out_tready0      (0)
         
-        ,.egr_route_out_tdata1       (egr_out_tdata1)
-        ,.egr_route_out_tvalid1      (egr_out_tvalid1)
-        ,.egr_route_out_tready1      (egr_out_tready1)
+        ,.egr_route_out_tdata1       (egr_out_tdata0)
+        ,.egr_route_out_tvalid1      (egr_out_tvalid0)
+        ,.egr_route_out_tready1      (egr_out_tready0)
 
       );
 
@@ -421,9 +508,9 @@ thymesisflow_32B_64B_routing_compute_ingress TF_COMPUTE_ROUTING_INGR
         ,.route_in_tvalid0          (ing_in_tvalid0)
         ,.route_in_tready0          (ing_in_tready0)
 
-        ,.route_in_tdata1           (ing_in_tdata1)
-        ,.route_in_tvalid1          (ing_in_tvalid1)
-        ,.route_in_tready1          (ing_in_tready1)
+        ,.route_in_tdata1           ()
+        ,.route_in_tvalid1          (0)
+        ,.route_in_tready1          ()
 
         ,.route_out_tdata           (ocx_tlx_resp_tdata)
         ,.route_out_tvalid          (ocx_tlx_resp_tvalid)
@@ -434,54 +521,7 @@ thymesisflow_32B_64B_routing_compute_ingress TF_COMPUTE_ROUTING_INGR
         ,.arb_sel                   (c_arb_sel_mem_ingr)
 
       );
-  `endif
-  //End of !TFLOOPBACK      
-
-  `ifdef TFLOOPBACK
-thymesisflow_64B_32B_routing_egress TF_COMPUTE_ROUTING_EGR
-    (
-
-       .clock                     (clock)                   
-      ,.reset_n                   (reset_n)
-
-      ,.egr_route_in_tdata         (ocx_compute_netflit_out_tdata)
-      ,.egr_route_in_tvalid        (ocx_compute_netflit_out_tvalid)
-      ,.egr_route_in_tready        (ocx_compute_netflit_out_tready)
-
-      ,.egr_route_out_tdata0       (ing_in_tdata0)
-      ,.egr_route_out_tvalid0      (ing_in_tvalid0)
-      ,.egr_route_out_tready0      (ing_in_tready0)
-
-      ,.egr_route_out_tdata1       (ing_in_tdata1)
-      ,.egr_route_out_tvalid1      (ing_in_tvalid1)
-      ,.egr_route_out_tready1      (ing_in_tready1)
-
-    );     
-
-//routes 32B flits to AXI-S 64B flit OpenCAPI aware.
- thymesisflow_32B_64B_routing_compute_ingress TF_COMPUTE_ROUTING_INGR 
-    (
-       .clock                     (clock)         
-      ,.reset_n                   (reset_n) 
-
-      ,.route_in_tdata0           (egr_out_tdata0)
-      ,.route_in_tvalid0          (egr_out_tvalid0)
-      ,.route_in_tready0          (egr_out_tready0)
-
-      ,.route_in_tdata1           (egr_out_tdata1)
-      ,.route_in_tvalid1          (egr_out_tvalid1)
-      ,.route_in_tready1          (egr_out_tready1)
-
-      ,.route_out_tdata           (ocx_tlx_resp_tdata)
-      ,.route_out_tvalid          (ocx_tlx_resp_tvalid)
-      ,.route_out_tready          (ocx_tlx_resp_tready)
-
-      ,.arb_req                   (c_arb_req_mem_ingr)
-      ,.arb_req_nxt               (c_arb_req_nxt_mem_ingr)
-      ,.arb_sel                   (c_arb_sel_mem_ingr)
-
-    );
-  `endif
+ 
 
 thymesisflow_rr_arbiter#(.SIZE(2))  TF_COMPUTE_RR_ARB_INGR
       (
@@ -497,6 +537,36 @@ thymesisflow_rr_arbiter#(.SIZE(2))  TF_COMPUTE_RR_ARB_INGR
 
 // modules that implement the memory side below.
 `ifndef TFCOMPUTE
+
+wire [519:0]     ocx_tlx_data_tdata_reg;
+wire             ocx_tlx_data_tvalid_reg;
+wire             ocx_tlx_data_tready_reg;
+
+axis_register_slice_0 ocx_tlx_data_reg (
+  .aclk(clock),                    // input wire aclk
+  .aresetn(reset_n),              // input wire aresetn
+  .m_axis_tvalid(ocx_tlx_data_tvalid),  // input wire s_axis_tvalid
+  .m_axis_tready(ocx_tlx_data_tready),  // output wire s_axis_tready
+  .m_axis_tdata(ocx_tlx_data_tdata),    // input wire [519 : 0] s_axis_tdata
+  .s_axis_tvalid(ocx_tlx_data_tvalid_reg),  // output wire m_axis_tvalid
+  .s_axis_tready(ocx_tlx_data_tready_reg),  // input wire m_axis_tready
+  .s_axis_tdata(ocx_tlx_data_tdata_reg)    // output wire [519 : 0] m_axis_tdata
+);
+
+ila_512 ila_ocx_tlx_data(
+.clk(clock),
+.probe0(ocx_tlx_data_tdata_reg),
+.probe1(ocx_tlx_data_tvalid_reg),
+.probe2(ocx_tlx_data_tready_reg)
+);
+
+ila_256 ila_ocx_tlx_cmd(
+.clk(clock),
+.probe0(ocx_tlx_cmd_tdata),
+.probe1(ocx_tlx_cmd_tvalid),
+.probe2(ocx_tlx_cmd_tready)
+);
+
 
  thymesisflow_memory_ingress  TF_MEMORY_INGRESS (
 
@@ -545,9 +615,9 @@ thymesisflow_rr_arbiter#(.SIZE(2))  TF_COMPUTE_RR_ARB_INGR
            ,.tlx_cmd_tvalid               (ocx_tlx_cmd_tvalid)
            ,.tlx_cmd_tready               (ocx_tlx_cmd_tready)
 
-           ,.tlx_data_tdata               (ocx_tlx_data_tdata)
-           ,.tlx_data_tvalid              (ocx_tlx_data_tvalid)
-           ,.tlx_data_tready              (ocx_tlx_data_tready)
+           ,.tlx_data_tdata               (ocx_tlx_data_tdata_reg)
+           ,.tlx_data_tvalid              (ocx_tlx_data_tvalid_reg)
+           ,.tlx_data_tready              (ocx_tlx_data_tready_reg)
    );
 
 
@@ -735,17 +805,16 @@ data_lookup_bram   TF_DATA_LOOKUP_BRAM1
         ,.wea                      (memory_ingress_datalookup1_out_portA_we)
         ,.web                      (memory_egress_datalookup1_in_portA_we)
       );
-
-
+ 
 //routes 2x AXI-S 32B flits to AXI-S 64B flit OpenCAPI aware.
 thymesisflow_32B_64B_routing_memory_ingress TF_MEMORY_ROUTING_INGR 
       (
          .clock                     (clock)         
         ,.reset_n                   (reset_n) 
         
-        ,.route_in_tdata0           (ing_in_tdata0)
-        ,.route_in_tvalid0          (ing_in_tvalid0)
-        ,.route_in_tready0          (ing_in_tready0)
+        ,.route_in_tdata0           ()
+        ,.route_in_tvalid0          (0)
+        ,.route_in_tready0          ()
 
         ,.route_in_tdata1           (ing_in_tdata1)
         ,.route_in_tvalid1          (ing_in_tvalid1)
@@ -761,6 +830,12 @@ thymesisflow_32B_64B_routing_memory_ingress TF_MEMORY_ROUTING_INGR
 
       );
       
+ila_512 TF_MEMORY_ROUTING_INGR_64B(
+.clk(clock),
+.probe0(memory_netflit_in_tdata),
+.probe1(memory_netflit_in_tvalid),
+.probe2(memory_netflit_in_tready)
+);
 
 
 thymesisflow_rr_arbiter#(.SIZE(2))  TF_MEMORY_RR_ARB_INGR
@@ -776,20 +851,44 @@ thymesisflow_rr_arbiter#(.SIZE(2))  TF_MEMORY_RR_ARB_INGR
           ,.selected                (arb_sel_mem_ingr)              
       );
 
-      
+
+wire  [511:0]  memory_netflit_out_tdata_reg;
+wire           memory_netflit_out_tvalid_reg;
+wire           memory_netflit_out_tready_reg;
+
+axis_register_slice_1_64 memory_netflit_out_reg (
+  .aclk(clock),                    // input wire aclk
+  .aresetn(reset_n),              // input wire aresetn
+  .s_axis_tvalid(memory_netflit_out_tvalid),  // input wire s_axis_tvalid
+  .s_axis_tready(memory_netflit_out_tready),  // output wire s_axis_tready
+  .s_axis_tdata(memory_netflit_out_tdata),    // input wire [519 : 0] s_axis_tdata
+  .m_axis_tvalid(memory_netflit_out_tvalid_reg),  // output wire m_axis_tvalid
+  .m_axis_tready(memory_netflit_out_tready_reg),  // input wire m_axis_tready
+  .m_axis_tdata(memory_netflit_out_tdata_reg)    // output wire [519 : 0] m_axis_tdata
+);
+
+ila_512 ila_memory_netflit_out(
+.clk(clock),
+.probe0(memory_netflit_out_tdata),
+.probe1(memory_netflit_out_tvalid),
+.probe2(memory_netflit_out_tready)
+);
+
+
+
 thymesisflow_64B_32B_routing_egress TF_MEMORY_ROUTING_EGR
       (
 
          .clock                     (clock)                   
         ,.reset_n                   (reset_n)
 
-        ,.egr_route_in_tdata         (memory_netflit_out_tdata)
-        ,.egr_route_in_tvalid        (memory_netflit_out_tvalid)
-        ,.egr_route_in_tready        (memory_netflit_out_tready)
+        ,.egr_route_in_tdata         (memory_netflit_out_tdata_reg)
+        ,.egr_route_in_tvalid        (memory_netflit_out_tvalid_reg)
+        ,.egr_route_in_tready        (memory_netflit_out_tready_reg)
 
-        ,.egr_route_out_tdata0       (egr_out_tdata0)
-        ,.egr_route_out_tvalid0      (egr_out_tvalid0)
-        ,.egr_route_out_tready0      (egr_out_tready0)
+        ,.egr_route_out_tdata0       ()
+        ,.egr_route_out_tvalid0      ()
+        ,.egr_route_out_tready0      (0)
         
         ,.egr_route_out_tdata1       (egr_out_tdata1)
         ,.egr_route_out_tvalid1      (egr_out_tvalid1)
@@ -797,18 +896,22 @@ thymesisflow_64B_32B_routing_egress TF_MEMORY_ROUTING_EGR
 
       );
 
+ila_256 ILA_TF_MEMORY_ROUTING_EGR(
+.clk(clock),
+.probe0(egr_out_tdata1),
+.probe1(egr_out_tvalid1),
+.probe2(egr_out_tready1)
+);
 
 
 `endif
 // End of !TFCOMPUTE
 
-`ifndef TFLOOPBACK
-//--------------->QSFP0 Network Pipeline
+
 clock_domain_cross_fifo TF_QSFP0_LLC_INGRESS_FIFO 
       (
-         .axis_data_count          (clkcross0_ingress_fifo_axis_data_count)
+         .axis_wr_data_count          (clkcross0_ingress_fifo_axis_data_count)
         ,.m_axis_aclk              (clock)
-        ,.m_axis_aresetn           (reset_n)
         ,.m_axis_tdata             (qsfp0_bckpr_tdata_ing)
         ,.m_axis_tready            (qsfp0_bckpr_tready_ing)
         ,.m_axis_tvalid            (qsfp0_bckpr_tvalid_ing)
@@ -825,7 +928,6 @@ clock_domain_cross_fifo TF_QSFP0_LLC_INGRESS_FIFO
 clock_domain_cross_fifo  TF_QSFP0_LLC_EGRESS_FIFO
       (
          .m_axis_aclk              (qsfp0_usr_clk)
-        ,.m_axis_aresetn           (power_on_qsfp0_rout)
         ,.m_axis_tdata             (clkcross0_egress_fifo_out_tdata)
         ,.m_axis_tready            (clkcross0_egress_fifo_out_tready)
         ,.m_axis_tvalid            (clkcross0_egress_fifo_out_tvalid)
@@ -858,6 +960,20 @@ thymesisflow_32B_bckpressure_ingress TF_MEMORY_BCKPR_ING_QSFP0
        , .local_creds_init          (qsfp0_loc_ingress_init_creds)
        , .ret_remote_rx_creds       (qsfp0_rem_ingress_ret_creds)
 
+);
+
+ila_256 ila_256_TF_MEMORY_BCKPR_EGR_QSFP0(
+.clk(clock),
+.probe0(egr_out_tdata0),
+.probe1(egr_out_tvalid0),
+.probe2(egr_out_tready0)
+);
+
+ila_256 ila_256_TF_MEMORY_BCKPR_EGR_QSFP0_bkpr(
+.clk(clock),
+.probe0(qsfp0_bckpr_tdata),
+.probe1(qsfp0_bckpr_tvalid),
+.probe2(qsfp0_bckpr_tready)
 );
 
 
@@ -918,6 +1034,12 @@ thymesisflow_credit_mgr#(.MSB(7))   TF_QSFP0_LOCAL_INGR_CMGR
 
 );
 
+ila_256 ila_256_TFLLC_32B_QSFP0(
+.clk(clock),
+.probe0(clkcross0_egress_fifo_out_tdata),
+.probe1(clkcross0_egress_fifo_out_tvalid),
+.probe2(clkcross0_egress_fifo_out_tready)
+);
 
 thymesisflow_32B_llc_top TFLLC_32B_QSFP0  
      (
@@ -968,7 +1090,7 @@ thymesisflow_llc_framer_bram_32B  TFLLC_FRAMER_BRAM0_32B
         ,.wea                       (framer_bram_wen0)
        );
 
-
+/*
 //Aurora Quad transceiver core instance
 aurora_qsfp0 AURORA_QSFP0_CORE
        (
@@ -998,6 +1120,82 @@ aurora_qsfp0 AURORA_QSFP0_CORE
         ,.txp                       (qsfp0_tx_p)
         ,.user_clk_out              (qsfp0_usr_clk)
       );
+*/
+
+assign qsfp0_crc_valid = qsfp0_rx_tlast;
+
+ila_0 ila_com_rx(
+.clk(clock),
+
+
+.probe0(qsfp0_rx_tvalid),
+.probe1(qsfp0_rx_tdata),
+.probe2(qsfp0_rx_tkeep),
+.probe3(0),
+.probe4(qsfp0_rx_tlast),
+.probe5(qsfp0_crc_ok),
+.probe6(0),
+.probe7(0),
+.probe8(0)
+);
+
+ila_0 ila_com_tx(
+.clk(clock),
+
+
+.probe0(qsfp0_tx_tvalid),
+.probe1(qsfp0_tx_tdata),
+.probe2(qsfp0_tx_tkeep),
+.probe3(qsfp0_tx_tready),
+.probe4(qsfp0_tx_tlast),
+.probe5(0),
+.probe6(0),
+.probe7(0),
+.probe8(0)
+);
+
+assign qsfp0_usr_clk = clock;
+assign power_on_qsfp0_rout = reset_n;
+assign qsfp0_crc_ok  = !qsfp0_rx_tuser;
+
+//--------------->QSFP0 Network Pipeline
+ cmac_krnl_0_0   cmac_krnl_compute
+(
+  .ap_clk(clock)               ,
+  .ap_rst_n(reset_n)             ,
+
+  .axis_net_rx_tvalid(qsfp0_rx_tvalid)   ,
+  .axis_net_rx_tready(1'b1)   ,
+  .axis_net_rx_tdata(qsfp0_rx_tdata)    ,
+  .axis_net_rx_tkeep(qsfp0_rx_tkeep)    ,
+  .axis_net_rx_tlast(qsfp0_rx_tlast)    ,
+  .rx_err(qsfp0_rx_tuser), 
+
+  .axis_net_tx_tvalid(qsfp0_tx_tvalid)   ,
+  .axis_net_tx_tready(qsfp0_tx_tready)   ,
+  .axis_net_tx_tdata(qsfp0_tx_tdata)    ,
+  .axis_net_tx_tkeep(qsfp0_tx_tkeep)    ,
+  .axis_net_tx_tlast(qsfp0_tx_tlast)    ,
+
+  // Network physical
+  .clk_gt_freerun(serdes_init_clock),
+  .gt_rxp_in(qsfp0_rx_p),
+  .gt_rxn_in(qsfp0_rx_n),
+  .gt_txp_out(qsfp0_tx_p),
+  .gt_txn_out(qsfp0_tx_n),
+  .gt_refclk0_p(qsfp0_ref_clk_p),
+  .gt_refclk0_n(qsfp0_ref_clk_n),
+  .net_clk(),
+  .net_rst_n(),
+
+  .local_mac(48'h02_00_00_00_00_00),  
+  .remote_mac(48'h02_00_00_00_00_01), 
+  .ethertype(32'hFF_FF_FF_FF)  
+
+
+);
+
+
 
 //end of QSFP0
 //---------------> QSFP1 NETWORK PIPELINE
@@ -1006,7 +1204,6 @@ aurora_qsfp0 AURORA_QSFP0_CORE
 clock_domain_cross_fifo  TF_QSFP1_LLC_EGRESS_FIFO
       (
          .m_axis_aclk              (qsfp1_usr_clk)
-        ,.m_axis_aresetn           (power_on_qsfp1_rout)
         ,.m_axis_tdata             (clkcross1_egress_fifo_out_tdata)
         ,.m_axis_tready            (clkcross1_egress_fifo_out_tready)
         ,.m_axis_tvalid            (clkcross1_egress_fifo_out_tvalid)
@@ -1018,21 +1215,31 @@ clock_domain_cross_fifo  TF_QSFP1_LLC_EGRESS_FIFO
 
       );
 
+
+
+
+
 //ingress clock domain crossing fifo
 clock_domain_cross_fifo TF_QSFP1_LLC_INGRESS_FIFO 
       (
-         .axis_data_count          (clkcross1_ingress_fifo_axis_data_count)
+         .axis_wr_data_count          (clkcross1_ingress_fifo_axis_data_count)
         ,.m_axis_aclk              (clock)
-        ,.m_axis_aresetn           (reset_n)
         ,.m_axis_tdata             (qsfp1_bckpr_tdata_ing)
         ,.m_axis_tready            (qsfp1_bckpr_tready_ing)
         ,.m_axis_tvalid            (qsfp1_bckpr_tvalid_ing)
         ,.s_axis_aclk              (qsfp1_usr_clk)
-        ,.s_axis_aresetn           (power_on_qsfp1_rout)
+        ,.s_axis_aresetn           (reset_n)
         ,.s_axis_tdata             (clkcross1_ingress_fifo_out_tdata)
         ,.s_axis_tready            (clkcross1_ingress_fifo_out_tready)
         ,.s_axis_tvalid            (clkcross1_ingress_fifo_out_tvalid)
       );
+
+ila_256 _ILA_TF_MEMORY_BCKPR_ING_QSFP1(
+.clk(clock),
+.probe0(qsfp1_bckpr_tdata_ing),
+.probe1(qsfp1_bckpr_tvalid_ing),
+.probe2(qsfp1_bckpr_tready_ing)
+);
 
 thymesisflow_32B_bckpressure_ingress TF_MEMORY_BCKPR_ING_QSFP1 
       (
@@ -1055,6 +1262,12 @@ thymesisflow_32B_bckpressure_ingress TF_MEMORY_BCKPR_ING_QSFP1
 
 );
 
+ila_256 _ILA_TF_MEMORY_ING_QSFP1(
+.clk(clock),
+.probe0(ing_in_tdata1),
+.probe1(ing_in_tvalid1),
+.probe2(ing_in_tready1)
+);
 
 thymesisflow_32B_bckpressure_egress TF_MEMORY_BCKPR_EGR_QSFP1 
       (
@@ -1112,6 +1325,12 @@ thymesisflow_credit_mgr#(.MSB(7))   TF_QSFP1_LOCAL_INGR_CMGR
 
 );
 
+ila_256 ILA_TFLLC_32B_QSFP1(
+.clk(clock),
+.probe0(clkcross1_ingress_fifo_out_tdata),
+.probe1(clkcross1_ingress_fifo_out_tvalid),
+.probe2(clkcross1_ingress_fifo_out_tready)
+);
 
 thymesisflow_32B_llc_top TFLLC_32B_QSFP1 
      (
@@ -1163,6 +1382,7 @@ thymesisflow_llc_framer_bram_32B  TFLLC_FRAMER_BRAM1_32B
         ,.wea                          (framer_bram_wen1)
        );
 
+/*
 //Aurora Quad transceiver core instance
 aurora_qsfp1 AURORA_QSFP1_CORE
        (
@@ -1192,8 +1412,81 @@ aurora_qsfp1 AURORA_QSFP1_CORE
         ,.txp                       (qsfp1_tx_p)
         ,.user_clk_out              (qsfp1_usr_clk)
       );
-`endif
-// End of !TFLOOPBACK
+*/
+
+assign qsfp1_crc_valid = qsfp1_rx_tlast;
+ 
+ ila_0 ila_mem_rx(
+.clk(clock),
+
+
+.probe0(qsfp1_rx_tvalid),
+.probe1(qsfp1_rx_tdata),
+.probe2(qsfp1_rx_tkeep),
+.probe3(qsfp1_rx_tready),
+.probe4(qsfp1_rx_tlast),
+.probe5(qsfp1_crc_ok),
+.probe6(0),
+.probe7(0),
+.probe8(0)
+);
+
+ila_0 ila_mem_tx(
+.clk(clock),
+
+
+.probe0(qsfp1_tx_tvalid),
+.probe1(qsfp1_tx_tdata),
+.probe2(qsfp1_tx_tkeep),
+.probe3(qsfp1_tx_tready),
+.probe4(qsfp1_tx_tlast),
+.probe5(0),
+.probe6(0),
+.probe7(0),
+.probe8(0)
+);
+
+assign qsfp1_usr_clk = clock;
+assign power_on_qsfp1_rout = reset_n;
+assign qsfp1_crc_ok = !qsfp1_rx_tuser;
+
+//--------------->QSFP1 Network Pipeline
+ cmac_krnl_1_0   cmac_krnl_mem
+(
+  .ap_clk(clock)               ,
+  .ap_rst_n(reset_n)             ,
+
+  .axis_net_rx_tvalid(qsfp1_rx_tvalid)   ,
+  .axis_net_rx_tready(1'b1)   ,
+  .axis_net_rx_tdata(qsfp1_rx_tdata)    ,
+  .axis_net_rx_tkeep(qsfp1_rx_tkeep)    ,
+  .axis_net_rx_tlast(qsfp1_rx_tlast)    ,
+  .rx_err(qsfp1_rx_tuser), 
+
+  .axis_net_tx_tvalid(qsfp1_tx_tvalid)   ,
+  .axis_net_tx_tready(qsfp1_tx_tready)   ,
+  .axis_net_tx_tdata(qsfp1_tx_tdata)    ,
+  .axis_net_tx_tkeep(qsfp1_tx_tkeep)    ,
+  .axis_net_tx_tlast(qsfp1_tx_tlast)    ,
+
+  // Network physical
+  .clk_gt_freerun(serdes_init_clock),
+  .gt_rxp_in(qsfp1_rx_p),
+  .gt_rxn_in(qsfp1_rx_n),
+  .gt_txp_out(qsfp1_tx_p),
+  .gt_txn_out(qsfp1_tx_n),
+  .gt_refclk0_p(qsfp1_ref_clk_p),
+  .gt_refclk0_n(qsfp1_ref_clk_n),
+  .net_clk(),
+  .net_rst_n(),
+
+  .local_mac(48'h02_00_00_00_00_01),  
+  .remote_mac(48'h02_00_00_00_00_00), 
+  .ethertype(32'hFF_FF_FF_FF)  
+
+);
+
+
 
 
 endmodule

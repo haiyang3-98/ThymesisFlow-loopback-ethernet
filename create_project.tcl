@@ -826,8 +826,8 @@ if { ($afu eq "thymesisflow") && ($tftype ne "compute")} {
 # Create Xilinx IP for network facing transceiver stack
 if {($afu eq "thymesisflow")} {
     source ${origin_dir}/afu/${afu}/ip/llc_framer_bram_32B.tcl
-    source ${origin_dir}/afu/${afu}/ip/aurora_qsfp1.tcl
-    source ${origin_dir}/afu/${afu}/ip/aurora_qsfp0.tcl
+   # source ${origin_dir}/afu/${afu}/ip/aurora_qsfp1.tcl
+   # source ${origin_dir}/afu/${afu}/ip/aurora_qsfp0.tcl
 }
 
 
