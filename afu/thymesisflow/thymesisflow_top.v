@@ -96,6 +96,20 @@ module thymesisflow_top  (
 
 );
 
+
+reg [31:0] timestamp;
+always @ (posedge clock) begin
+  if(!reset_n) begin
+    timestamp = 0;
+  end
+  else begin
+    timestamp = timestamp + 1;
+
+  end
+
+end
+
+
 ila_256 ila_ocx_tlx_cmd_flit_in(
 .clk(clock),
 .probe0(ocx_tlx_cmd_flit_in_tdata),
@@ -412,12 +426,12 @@ assign      qsfp0_loc_ingress_cons_cred = 1'b0;
 assign      qsfp1_rem_ingress_getall_creds = 1'b0;
 assign      qsfp1_loc_ingress_cons_cred = 1'b0;
 
-`ifndef TFLOOPBACK
+`ifdef AURORA
 aurora_power_on_reset AURORA_RESET_CONTROL0
      (
          .clock                      (serdes_init_clock)
         ,.pma_init                  (qsfp0_pma_init)
-        ,.reset_n                   (serdes_start0)
+        ,.reset_n                   (reset_n)
         ,.rout_n                    (power_on_qsfp0_rout)
         ,.rpb                       (qsfp0_power_on_rpb)
         ,.sys_out_aurora_r          (1'b0)
@@ -427,7 +441,7 @@ aurora_power_on_reset AURORA_RESET_CONTROL1
      (
          .clock                     (serdes_init_clock)
         ,.pma_init                  (qsfp1_pma_init)
-        ,.reset_n                   (serdes_start1)
+        ,.reset_n                   (reset_n)
         ,.rout_n                    (power_on_qsfp1_rout)
         ,.rpb                       (qsfp1_power_on_rpb)
         ,.sys_out_aurora_r          (1'b0)
@@ -1090,7 +1104,7 @@ thymesisflow_llc_framer_bram_32B  TFLLC_FRAMER_BRAM0_32B
         ,.wea                       (framer_bram_wen0)
        );
 
-/*
+`ifdef AURORA
 //Aurora Quad transceiver core instance
 aurora_qsfp0 AURORA_QSFP0_CORE
        (
@@ -1120,9 +1134,8 @@ aurora_qsfp0 AURORA_QSFP0_CORE
         ,.txp                       (qsfp0_tx_p)
         ,.user_clk_out              (qsfp0_usr_clk)
       );
-*/
+`endif 
 
-assign qsfp0_crc_valid = qsfp0_rx_tlast;
 
 ila_0 ila_com_rx(
 .clk(clock),
@@ -1136,7 +1149,7 @@ ila_0 ila_com_rx(
 .probe5(qsfp0_crc_ok),
 .probe6(0),
 .probe7(0),
-.probe8(0)
+.probe8(timestamp)
 );
 
 ila_0 ila_com_tx(
@@ -1151,12 +1164,17 @@ ila_0 ila_com_tx(
 .probe5(0),
 .probe6(0),
 .probe7(0),
-.probe8(0)
+.probe8(timestamp)
 );
 
+`ifdef ETH
+
+assign qsfp0_crc_valid = qsfp0_rx_tlast;
 assign qsfp0_usr_clk = clock;
 assign power_on_qsfp0_rout = reset_n;
 assign qsfp0_crc_ok  = !qsfp0_rx_tuser;
+
+
 
 //--------------->QSFP0 Network Pipeline
  cmac_krnl_0_0   cmac_krnl_compute
@@ -1195,6 +1213,7 @@ assign qsfp0_crc_ok  = !qsfp0_rx_tuser;
 
 );
 
+`endif
 
 
 //end of QSFP0
@@ -1382,7 +1401,8 @@ thymesisflow_llc_framer_bram_32B  TFLLC_FRAMER_BRAM1_32B
         ,.wea                          (framer_bram_wen1)
        );
 
-/*
+`ifdef AURORA
+
 //Aurora Quad transceiver core instance
 aurora_qsfp1 AURORA_QSFP1_CORE
        (
@@ -1412,9 +1432,9 @@ aurora_qsfp1 AURORA_QSFP1_CORE
         ,.txp                       (qsfp1_tx_p)
         ,.user_clk_out              (qsfp1_usr_clk)
       );
-*/
 
-assign qsfp1_crc_valid = qsfp1_rx_tlast;
+`endif
+
  
  ila_0 ila_mem_rx(
 .clk(clock),
@@ -1428,7 +1448,7 @@ assign qsfp1_crc_valid = qsfp1_rx_tlast;
 .probe5(qsfp1_crc_ok),
 .probe6(0),
 .probe7(0),
-.probe8(0)
+.probe8(timestamp)
 );
 
 ila_0 ila_mem_tx(
@@ -1443,8 +1463,12 @@ ila_0 ila_mem_tx(
 .probe5(0),
 .probe6(0),
 .probe7(0),
-.probe8(0)
+.probe8(timestamp)
 );
+
+`ifdef ETH
+
+assign qsfp1_crc_valid = qsfp1_rx_tlast;
 
 assign qsfp1_usr_clk = clock;
 assign power_on_qsfp1_rout = reset_n;
@@ -1486,7 +1510,7 @@ assign qsfp1_crc_ok = !qsfp1_rx_tuser;
 
 );
 
-
+`endif
 
 
 endmodule

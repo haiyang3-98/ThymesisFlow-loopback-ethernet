@@ -421,7 +421,11 @@ assign reg_00058_init = 64'h0000_0000_0000_0000;
 assign reg_00060_init = 64'h0000_0000_0000_0000;  
 assign reg_00068_init = 64'h0000_0000_0000_0000;  
 assign reg_00070_init = 64'h0000_0000_0000_0000;  
-assign reg_00078_init = 64'h0000_0000_0000_0000;  
+//`ifdef AURORA
+//assign reg_00078_init = 64'h0000_0000_0000_0011;  //aurora port 1 and 2
+//`else
+assign reg_00078_init = 64'h0000_0000_0000_0000; 
+//`endif
 assign reg_00080_init = 64'h0000_0000_0000_0000; //bits[6:0] should be 1 during initialization to keep aurora reset_pb asserted at boot. Resets will be deasserted at boot by OPAL
 //assign reg_00100_init = 64'h0000_0000_0000_0000;     
 assign reg_00108_init = 64'h0000_0000_0000_0000;     
