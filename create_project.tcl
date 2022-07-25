@@ -822,6 +822,13 @@ if { ($afu eq "thymesisflow") && ($tftype ne "compute")} {
     source ${origin_dir}/afu/${afu}/ip/memory_egress_lookup.tcl
 }
 
+if { ($afu eq "thymesisflow") && ($tftype ne "loopback")} {
+    set_property  ip_repo_paths {./eth-axi-streamer} [current_project]    
+    update_ip_catalog
+}
+
+
+
 
 # Create Xilinx IP for network facing transceiver stack
 if {($afu eq "thymesisflow")} {
