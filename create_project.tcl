@@ -799,6 +799,7 @@ if {$use_flash ne ""} {
 if { ($afu eq "thymesisflow") } {
     source ${origin_dir}/afu/${afu}/ip/clock_domain_cross_fifo.tcl
     source ${origin_dir}/afu/${afu}/ip/dataflit_fifo.tcl
+    source ${origin_dir}/afu/${afu}/ip/axis_reg_slice.tcl
 }
 
 if { ($afu eq "thymesisflow") && ($tftype ne "compute")} {
@@ -822,9 +823,15 @@ if { ($afu eq "thymesisflow") && ($tftype ne "compute")} {
     source ${origin_dir}/afu/${afu}/ip/memory_egress_lookup.tcl
 }
 
-if { ($afu eq "thymesisflow") && ($tftype ne "loopback")} {
-    set_property  ip_repo_paths {./eth-axi-streamer} [current_project]    
+if { ($afu eq "thymesisflow") && ($tftype eq "loopback")} {
+   # cd ${origin_dir}/eth-axi-streamer/eth
+   # exec vivado -mode batch -source ./package_cmac_krnl.tcl
+   # cd ${origin_dir}
+    set_property  ip_repo_paths {./afu/thymesisflow/hls_modules/memory_egress/ocx_memory_egress/solution1/impl/ip/ ./afu/thymesisflow/hls_modules/memory_egress_lookup/ocx_memory_egress_lookup/solution1/impl/ip/ ./eth-axi-streamer} [current_project]    
     update_ip_catalog
+    source ${origin_dir}/afu/${afu}/ip/cmac.tcl
+    source ${origin_dir}/afu/${afu}/ip/ila.tcl
+   
 }
 
 

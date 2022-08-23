@@ -2315,10 +2315,6 @@ rmem_mmio_regs MMIO (
 `endif 
 ) ;
 
-ila_64 ila_aurora_ctrl (
-	.clk(clock), // input wire clk
-	.probe0(aurora_control) // input wire [63:0] probe0
-);
 
 
 assign aurora_status[8:0]   = aurora_core0_status; 

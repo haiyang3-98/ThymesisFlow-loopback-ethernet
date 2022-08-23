@@ -1,3 +1,4 @@
 [submodule "eth-axi-streamer"]
 	path = eth-axi-streamer
-	url = git@github.com:haiyang3-98/eth-axi-streamer.git
+	url = https://github.com/haiyang3-98/eth-axi-streamer.git
+	branch = main

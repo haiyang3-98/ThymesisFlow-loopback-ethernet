@@ -104,6 +104,20 @@ assign adapter_in_data_tready = adapter_out_tready & is_data;
 parameter INPUT_CMD_RESP = 2'b01;
 parameter INPUT_DATAFLIT = 2'b10;
 
+//count consecutive addr
+reg [15:0] counter_1 = 0;
+reg [15:0] counter_2 = 0;
+reg [15:0] counter_4 = 0;
+reg [15:0] counter_8 = 0;
+reg [15:0] counter_16 = 0;
+reg [15:0] counter_32 = 0;
+reg [15:0] counter_64 = 0;
+reg [15:0] counter_all = 0;
+reg [63:0] EA_old;
+wire [63:0] EA_diff;
+assign EA_diff = (adapter_in_cmd_tdata[`OCX_NET_CMD_EA] > EA_old)?(adapter_in_cmd_tdata[`OCX_NET_CMD_EA] - EA_old):( EA_old - adapter_in_cmd_tdata[`OCX_NET_CMD_EA] );
+
+
 //OpenCAPI protocol parsing
 always @(posedge(clock))
 begin
@@ -153,6 +167,25 @@ begin
        output_q[`OCX_FLITO_BE]            <= adapter_in_cmd_tdata[`OCX_NET_CMD_BE]; 
        output_q[`OCX_FLITO_EA]            <= adapter_in_cmd_tdata[`OCX_NET_CMD_EA]; 
        output_q_vld                       <= 1'b1;  
+
+      if ( EA_diff == 1*64 ) 
+        counter_1 = counter_1 + 1;
+      if (EA_diff == 2*64)
+        counter_2 = counter_2 + 1;
+      if (2*64<EA_diff && EA_diff<=4*64)
+        counter_4 = counter_4 + 1;
+      if (4*64<EA_diff && EA_diff<=8*64)
+        counter_8 = counter_8 + 1;
+      if (8*64<EA_diff && EA_diff<=16*64)
+        counter_16 =  counter_16 + 1;      
+      if (16*64<EA_diff && EA_diff<=32*64)
+        counter_32 =  counter_32 + 1;
+      if (32*64<EA_diff && EA_diff<=64*64)
+        counter_64 = counter_64 + 1;
+
+      counter_all = counter_all + 1;
+      EA_old <= adapter_in_cmd_tdata[`OCX_NET_CMD_EA];
+
     end
   else if ((adapter_in_data_tready == 1'b1) &&  (adapter_in_data_tvalid == 1'b1))
     begin
@@ -162,6 +195,19 @@ begin
   else if (adapter_out_tready == 1'b1)
        output_q_vld                      <= 1'b0;
 end
+
+vio_8x16 consec_counter (
+  .clk(clock),              // input wire clk
+  .probe_in0(counter_1),  // input wire [15 : 0] probe_in0
+  .probe_in1(counter_2),  // input wire [15 : 0] probe_in1
+  .probe_in2(counter_4),  // input wire [15 : 0] probe_in2
+  .probe_in3(counter_8),  // input wire [15 : 0] probe_in3
+  .probe_in4(counter_16),  // input wire [15 : 0] probe_in4
+  .probe_in5(counter_32),  // input wire [15 : 0] probe_in5
+  .probe_in6(counter_64),  // input wire [15 : 0] probe_in6
+  .probe_in7(counter_all),  // input wire [15 : 0] probe_in7
+  .probe_in8(EA_diff)
+);
 
 
 endmodule

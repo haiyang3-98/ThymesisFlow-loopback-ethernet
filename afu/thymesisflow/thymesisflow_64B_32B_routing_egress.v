@@ -109,12 +109,6 @@ reg output_turn;//used for bonding.
 
 wire next_cmd_interface_id;//used for determining next interface
 
-ila_1 next_int_sel (
-	.clk(clock), // input wire clk
-
-
-	.probe0(next_cmd_interface_id) // input wire [0:0] probe0
-);
 
 
 wire ping_pong_ready0;

@@ -21,6 +21,8 @@
 // Module designer: Dimitris Syrivelis
 // Backup: Christian Pinto, Michele Gazzetti
 
+`define ETH
+`define DEBUG
 
 `timescale 1ns / 10ps
 // ******************************************************************************************************************************
@@ -109,6 +111,16 @@ always @ (posedge clock) begin
 
 end
 
+`ifdef DEBUG
+
+ila_512 ila_TF_COMPUTE_ROUTING_EGR(
+.clk(clock),
+
+
+.probe0(ocx_compute_netflit_out_tdata),
+.probe1(ocx_compute_netflit_out_tvalid),
+.probe2(ocx_compute_netflit_out_tready)
+);
 
 ila_256 ila_ocx_tlx_cmd_flit_in(
 .clk(clock),
@@ -131,6 +143,7 @@ ila_512 ila_ocx_tlx_resp(
 .probe2(ocx_tlx_resp_tresp)
 );
 
+`endif
 
 
 wire           qsfp0_usr_clk;
@@ -483,14 +496,6 @@ thymesisflow_64B_compute_egress_adapter TF_COMPUTE_EGRESS_ADAPTER (
 
        );
 
-ila_512 ila_TF_COMPUTE_ROUTING_EGR(
-.clk(clock),
-
-
-.probe0(ocx_compute_netflit_out_tdata),
-.probe1(ocx_compute_netflit_out_tvalid),
-.probe2(ocx_compute_netflit_out_tready)
-);
 
  thymesisflow_64B_32B_routing_egress TF_COMPUTE_ROUTING_EGR
       (
@@ -567,6 +572,8 @@ axis_register_slice_0 ocx_tlx_data_reg (
   .s_axis_tdata(ocx_tlx_data_tdata_reg)    // output wire [519 : 0] m_axis_tdata
 );
 
+`ifdef DEBUG
+
 ila_512 ila_ocx_tlx_data(
 .clk(clock),
 .probe0(ocx_tlx_data_tdata_reg),
@@ -580,6 +587,9 @@ ila_256 ila_ocx_tlx_cmd(
 .probe1(ocx_tlx_cmd_tvalid),
 .probe2(ocx_tlx_cmd_tready)
 );
+
+
+`endif
 
 
  thymesisflow_memory_ingress  TF_MEMORY_INGRESS (
@@ -658,6 +668,24 @@ ocx_memory_egress_lookup  TF_MEMORY_EGRESS_LOOKUP
        
        );
 
+`ifdef DEBUG
+
+ila_256 ila_tl_fifo_resp_out(
+.clk(clock),
+.probe0(memory_egress_tl_fifo_resp_out_tdata),
+.probe1(memory_egress_tl_fifo_resp_out_tvalid),
+.probe2(memory_egress_tl_fifo_resp_out_tready)
+);
+
+ila_40 ila_tl_resp(
+.clk(clock),
+.probe0(ocx_tl_resp_tdata),
+.probe1(ocx_tl_resp_tready),
+.probe2(ocx_tl_resp_tvalid)
+);
+
+
+`endif 
 
 ocx_memory_egress TF_MEMORY_EGRESS
        (
@@ -844,13 +872,6 @@ thymesisflow_32B_64B_routing_memory_ingress TF_MEMORY_ROUTING_INGR
 
       );
       
-ila_512 TF_MEMORY_ROUTING_INGR_64B(
-.clk(clock),
-.probe0(memory_netflit_in_tdata),
-.probe1(memory_netflit_in_tvalid),
-.probe2(memory_netflit_in_tready)
-);
-
 
 thymesisflow_rr_arbiter#(.SIZE(2))  TF_MEMORY_RR_ARB_INGR
       (
@@ -881,14 +902,6 @@ axis_register_slice_1_64 memory_netflit_out_reg (
   .m_axis_tdata(memory_netflit_out_tdata_reg)    // output wire [519 : 0] m_axis_tdata
 );
 
-ila_512 ila_memory_netflit_out(
-.clk(clock),
-.probe0(memory_netflit_out_tdata),
-.probe1(memory_netflit_out_tvalid),
-.probe2(memory_netflit_out_tready)
-);
-
-
 
 thymesisflow_64B_32B_routing_egress TF_MEMORY_ROUTING_EGR
       (
@@ -910,12 +923,34 @@ thymesisflow_64B_32B_routing_egress TF_MEMORY_ROUTING_EGR
 
       );
 
+`ifdef DEBUG
+
+ila_512 TF_MEMORY_ROUTING_INGR_64B(
+.clk(clock),
+.probe0(memory_netflit_in_tdata),
+.probe1(memory_netflit_in_tvalid),
+.probe2(memory_netflit_in_tready)
+);
+
+
+
+ila_512 ila_memory_netflit_out(
+.clk(clock),
+.probe0(memory_netflit_out_tdata),
+.probe1(memory_netflit_out_tvalid),
+.probe2(memory_netflit_out_tready)
+);
+
 ila_256 ILA_TF_MEMORY_ROUTING_EGR(
 .clk(clock),
 .probe0(egr_out_tdata1),
 .probe1(egr_out_tvalid1),
 .probe2(egr_out_tready1)
 );
+
+
+`endif
+
 
 
 `endif
@@ -976,20 +1011,6 @@ thymesisflow_32B_bckpressure_ingress TF_MEMORY_BCKPR_ING_QSFP0
 
 );
 
-ila_256 ila_256_TF_MEMORY_BCKPR_EGR_QSFP0(
-.clk(clock),
-.probe0(egr_out_tdata0),
-.probe1(egr_out_tvalid0),
-.probe2(egr_out_tready0)
-);
-
-ila_256 ila_256_TF_MEMORY_BCKPR_EGR_QSFP0_bkpr(
-.clk(clock),
-.probe0(qsfp0_bckpr_tdata),
-.probe1(qsfp0_bckpr_tvalid),
-.probe2(qsfp0_bckpr_tready)
-);
-
 
 thymesisflow_32B_bckpressure_egress TF_MEMORY_BCKPR_EGR_QSFP0 
       (
@@ -1048,12 +1069,9 @@ thymesisflow_credit_mgr#(.MSB(7))   TF_QSFP0_LOCAL_INGR_CMGR
 
 );
 
-ila_256 ila_256_TFLLC_32B_QSFP0(
-.clk(clock),
-.probe0(clkcross0_egress_fifo_out_tdata),
-.probe1(clkcross0_egress_fifo_out_tvalid),
-.probe2(clkcross0_egress_fifo_out_tready)
-);
+
+
+
 
 thymesisflow_32B_llc_top TFLLC_32B_QSFP0  
      (
@@ -1104,6 +1122,31 @@ thymesisflow_llc_framer_bram_32B  TFLLC_FRAMER_BRAM0_32B
         ,.wea                       (framer_bram_wen0)
        );
 
+`ifdef DEBUG
+
+ila_256 ila_256_TFLLC_32B_QSFP0(
+.clk(clock),
+.probe0(clkcross0_egress_fifo_out_tdata),
+.probe1(clkcross0_egress_fifo_out_tvalid),
+.probe2(clkcross0_egress_fifo_out_tready)
+);
+
+ila_256 ila_256_TF_MEMORY_BCKPR_EGR_QSFP0(
+.clk(clock),
+.probe0(egr_out_tdata0),
+.probe1(egr_out_tvalid0),
+.probe2(egr_out_tready0)
+);
+
+ila_256 ila_256_TF_MEMORY_BCKPR_EGR_QSFP0_bkpr(
+.clk(clock),
+.probe0(qsfp0_bckpr_tdata),
+.probe1(qsfp0_bckpr_tvalid),
+.probe2(qsfp0_bckpr_tready)
+);
+
+`endif
+
 `ifdef AURORA
 //Aurora Quad transceiver core instance
 aurora_qsfp0 AURORA_QSFP0_CORE
@@ -1136,7 +1179,7 @@ aurora_qsfp0 AURORA_QSFP0_CORE
       );
 `endif 
 
-
+`ifdef DEBUG
 ila_0 ila_com_rx(
 .clk(clock),
 
@@ -1166,6 +1209,8 @@ ila_0 ila_com_tx(
 .probe7(0),
 .probe8(timestamp)
 );
+
+`endif 
 
 `ifdef ETH
 
@@ -1253,12 +1298,7 @@ clock_domain_cross_fifo TF_QSFP1_LLC_INGRESS_FIFO
         ,.s_axis_tvalid            (clkcross1_ingress_fifo_out_tvalid)
       );
 
-ila_256 _ILA_TF_MEMORY_BCKPR_ING_QSFP1(
-.clk(clock),
-.probe0(qsfp1_bckpr_tdata_ing),
-.probe1(qsfp1_bckpr_tvalid_ing),
-.probe2(qsfp1_bckpr_tready_ing)
-);
+
 
 thymesisflow_32B_bckpressure_ingress TF_MEMORY_BCKPR_ING_QSFP1 
       (
@@ -1281,12 +1321,32 @@ thymesisflow_32B_bckpressure_ingress TF_MEMORY_BCKPR_ING_QSFP1
 
 );
 
+`ifdef DEBUG
+
+ila_256 _ILA_TF_MEMORY_BCKPR_ING_QSFP1(
+.clk(clock),
+.probe0(qsfp1_bckpr_tdata_ing),
+.probe1(qsfp1_bckpr_tvalid_ing),
+.probe2(qsfp1_bckpr_tready_ing)
+);
+
 ila_256 _ILA_TF_MEMORY_ING_QSFP1(
 .clk(clock),
 .probe0(ing_in_tdata1),
 .probe1(ing_in_tvalid1),
 .probe2(ing_in_tready1)
 );
+
+ila_256 ILA_TFLLC_32B_QSFP1(
+.clk(clock),
+.probe0(clkcross1_ingress_fifo_out_tdata),
+.probe1(clkcross1_ingress_fifo_out_tvalid),
+.probe2(clkcross1_ingress_fifo_out_tready)
+);
+
+
+`endif
+
 
 thymesisflow_32B_bckpressure_egress TF_MEMORY_BCKPR_EGR_QSFP1 
       (
@@ -1344,12 +1404,6 @@ thymesisflow_credit_mgr#(.MSB(7))   TF_QSFP1_LOCAL_INGR_CMGR
 
 );
 
-ila_256 ILA_TFLLC_32B_QSFP1(
-.clk(clock),
-.probe0(clkcross1_ingress_fifo_out_tdata),
-.probe1(clkcross1_ingress_fifo_out_tvalid),
-.probe2(clkcross1_ingress_fifo_out_tready)
-);
 
 thymesisflow_32B_llc_top TFLLC_32B_QSFP1 
      (
@@ -1435,7 +1489,8 @@ aurora_qsfp1 AURORA_QSFP1_CORE
 
 `endif
 
- 
+ `ifdef DEBUG
+
  ila_0 ila_mem_rx(
 .clk(clock),
 
@@ -1465,6 +1520,9 @@ ila_0 ila_mem_tx(
 .probe7(0),
 .probe8(timestamp)
 );
+
+
+ `endif
 
 `ifdef ETH
 
