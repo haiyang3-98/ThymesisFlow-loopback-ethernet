@@ -98,6 +98,23 @@ module thymesisflow_top  (
 
 );
 
+//for timing relax
+wire [199:0]     ocx_tlx_cmd_tdata_reg;
+wire             ocx_tlx_cmd_tvalid_reg;
+wire             ocx_tlx_cmd_tready_reg;
+
+axis_register_slice_25 ocx_tlx_cmd_tdata_reg (
+  .aclk(clock),                    // input wire aclk
+  .aresetn(reset_n),              // input wire aresetn
+  .m_axis_tvalid(ocx_tlx_cmd_tvalid),  // input wire s_axis_tvalid
+  .m_axis_tready(ocx_tlx_cmd_tready),  // output wire s_axis_tready
+  .m_axis_tdata(ocx_tlx_cmd_tdata),    // input wire [199 : 0] s_axis_tdata
+  .s_axis_tvalid(ocx_tlx_cmd_tvalid_reg),  // output wire m_axis_tvalid
+  .s_axis_tready(ocx_tlx_cmd_tready_reg),  // input wire m_axis_tready
+  .s_axis_tdata(ocx_tlx_cmd_tdata_reg)    // output wire [199 : 0] m_axis_tdata
+);
+
+
 
 reg [31:0] timestamp;
 always @ (posedge clock) begin
@@ -541,6 +558,17 @@ thymesisflow_32B_64B_routing_compute_ingress TF_COMPUTE_ROUTING_INGR
 
       );
  
+  
+ila_256 ila_compute_ingress(
+.clk(clock),
+.probe0(ing_in_tdata0),
+.probe1(ing_in_tvalid0),
+.probe2(ing_in_tready0)
+);
+
+
+
+
 
 thymesisflow_rr_arbiter#(.SIZE(2))  TF_COMPUTE_RR_ARB_INGR
       (
@@ -635,9 +663,9 @@ ila_256 ila_ocx_tlx_cmd(
 
            ,.enable                       (mem_mode_enable)
 
-           ,.tlx_cmd_tdata                (ocx_tlx_cmd_tdata)
-           ,.tlx_cmd_tvalid               (ocx_tlx_cmd_tvalid)
-           ,.tlx_cmd_tready               (ocx_tlx_cmd_tready)
+           ,.tlx_cmd_tdata                (ocx_tlx_cmd_tdata_reg)
+           ,.tlx_cmd_tvalid               (ocx_tlx_cmd_tvalid_reg)
+           ,.tlx_cmd_tready               (ocx_tlx_cmd_tready_reg)
 
            ,.tlx_data_tdata               (ocx_tlx_data_tdata_reg)
            ,.tlx_data_tvalid              (ocx_tlx_data_tvalid_reg)

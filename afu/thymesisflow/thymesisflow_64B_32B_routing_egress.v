@@ -237,7 +237,18 @@ end
 
 //needs revisit as it only considers only 2 interfaces (which are available on the AD9V3 card)
 //output turn is selected for channel bonding and if this is not the case, if outport0 is not selected we assume 1 is.
+assign next_cmd_interface_id = 1'b1;
+/*
 assign next_cmd_interface_id = (( egr_route_in_tdata[`OCX_SELECT_PORT0] == 1'b1) && ( egr_route_in_tdata[`OCX_SELECT_PORT1] == 1'b1)) ? output_turn : ~egr_route_in_tdata[`OCX_SELECT_PORT0];
+
+ila_1 ila_next_interface (
+	.clk(clk), // input wire clk
+
+
+	.probe0(next_cmd_interface_id), // input wire [0:0]  probe0  
+	.probe1(probe1) // input wire [0:0]  probe1
+);
+*/
 
 //Processes that pull data from stage 1 to ping pong buffer.
 

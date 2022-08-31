@@ -120,6 +120,14 @@ thymesisflow_llc_framer TFLLC_32B_FRAMER
 
       );
 
+ila_256 ila_TFLLC_32B_DRIVER_EGR(
+.clk(usr_clk),
+.probe0(driver_egr_tdata),
+.probe1(driver_egr_tvalid),
+.probe2(driver_egr_tready)
+);
+
+
 thymesisflow_llc_parser TFLLC_PARSER
        (
          .clock                         (usr_clk)

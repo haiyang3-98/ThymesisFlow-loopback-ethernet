@@ -33,6 +33,7 @@
 // ==============================================================================================================================
 // @@@  Module Declaration
 // ==============================================================================================================================
+`define COUNTER
 
 module thymesisflow_64B_compute_egress_adapter  (
 
@@ -105,6 +106,7 @@ parameter INPUT_CMD_RESP = 2'b01;
 parameter INPUT_DATAFLIT = 2'b10;
 
 //count consecutive addr
+`ifdef COUNTER
 reg [15:0] counter_1 = 0;
 reg [15:0] counter_2 = 0;
 reg [15:0] counter_4 = 0;
@@ -116,7 +118,7 @@ reg [15:0] counter_all = 0;
 reg [63:0] EA_old;
 wire [63:0] EA_diff;
 assign EA_diff = (adapter_in_cmd_tdata[`OCX_NET_CMD_EA] > EA_old)?(adapter_in_cmd_tdata[`OCX_NET_CMD_EA] - EA_old):( EA_old - adapter_in_cmd_tdata[`OCX_NET_CMD_EA] );
-
+`endif
 
 //OpenCAPI protocol parsing
 always @(posedge(clock))
@@ -168,6 +170,7 @@ begin
        output_q[`OCX_FLITO_EA]            <= adapter_in_cmd_tdata[`OCX_NET_CMD_EA]; 
        output_q_vld                       <= 1'b1;  
 
+`ifdef COUNTER
       if ( EA_diff == 1*64 ) 
         counter_1 = counter_1 + 1;
       if (EA_diff == 2*64)
@@ -185,7 +188,7 @@ begin
 
       counter_all = counter_all + 1;
       EA_old <= adapter_in_cmd_tdata[`OCX_NET_CMD_EA];
-
+`endif
     end
   else if ((adapter_in_data_tready == 1'b1) &&  (adapter_in_data_tvalid == 1'b1))
     begin
@@ -196,6 +199,7 @@ begin
        output_q_vld                      <= 1'b0;
 end
 
+`ifdef COUNTER
 vio_8x16 consec_counter (
   .clk(clock),              // input wire clk
   .probe_in0(counter_1),  // input wire [15 : 0] probe_in0
@@ -208,7 +212,7 @@ vio_8x16 consec_counter (
   .probe_in7(counter_all),  // input wire [15 : 0] probe_in7
   .probe_in8(EA_diff)
 );
-
+`endif
 
 endmodule
 
