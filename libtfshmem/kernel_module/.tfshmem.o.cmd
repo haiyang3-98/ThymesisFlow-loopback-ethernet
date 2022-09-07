@@ -1,0 +1,1 @@
+cmd_/home/thymesisflow/ThymesisFlow-Ethernet/libtfshmem/kernel_module/tfshmem.o := ld  -EL -m elf64lppc    -r -o /home/thymesisflow/ThymesisFlow-Ethernet/libtfshmem/kernel_module/tfshmem.o /home/thymesisflow/ThymesisFlow-Ethernet/libtfshmem/kernel_module/tfshmem_mod.o /home/thymesisflow/ThymesisFlow-Ethernet/libtfshmem/kernel_module/tfshmem_ops.o
