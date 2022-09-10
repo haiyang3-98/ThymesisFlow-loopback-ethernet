@@ -17,3 +17,23 @@ generate_target {all} [get_ips ila_0]
 create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_40
 set_property -dict [list CONFIG.C_PROBE0_WIDTH {40} CONFIG.C_NUM_OF_PROBES {3} CONFIG.Component_Name {ila_40}] [get_ips ila_40]
 generate_target {all} [get_ips ila_40]
+
+create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_163
+set_property -dict [list CONFIG.C_PROBE0_WIDTH {163} CONFIG.C_NUM_OF_PROBES {3} CONFIG.Component_Name {ila_163}] [get_ips ila_163]
+generate_target {all} [get_ips ila_163]
+
+create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_513
+set_property -dict [list CONFIG.C_PROBE0_WIDTH {513} CONFIG.C_NUM_OF_PROBES {3} CONFIG.Component_Name {ila_513}] [get_ips ila_513]
+generate_target {all} [get_ips ila_513]
+
+create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_520
+set_property -dict [list CONFIG.C_PROBE0_WIDTH {520} CONFIG.C_NUM_OF_PROBES {3} CONFIG.Component_Name {ila_520}] [get_ips ila_520]
+generate_target {all} [get_ips ila_520]
+
+create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_12
+set_property -dict [list CONFIG.C_PROBE0_WIDTH {12} CONFIG.C_NUM_OF_PROBES {1} CONFIG.Component_Name {ila_12}] [get_ips ila_12]
+generate_target {all} [get_ips ila_12]
+
+create_ip -name ila -vendor xilinx.com -library ip -version 6.2 -module_name ila_36
+set_property -dict [list CONFIG.C_PROBE0_WIDTH {36} CONFIG.C_NUM_OF_PROBES {1} CONFIG.Component_Name {ila_36}] [get_ips ila_36]
+generate_target {all} [get_ips ila_36]

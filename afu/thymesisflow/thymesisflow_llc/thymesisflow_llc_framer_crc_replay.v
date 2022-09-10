@@ -287,11 +287,6 @@ parameter SM_RETRANS_MSG_XMIT     = 4'b0011;
 parameter SM_RM_ACTIVATE_PATCHING = 4'b0101;
 parameter SM_RM_SEND_PREAMBLE     = 4'b1001; 
 
-ila_4 ila_smstate(
-.clk(clock),
-.probe0(smstate)
-);
-
 always @(posedge(clock))
 begin 
    if (reset_n == 1'b0)

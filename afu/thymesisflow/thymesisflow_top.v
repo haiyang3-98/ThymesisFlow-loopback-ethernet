@@ -21,8 +21,10 @@
 // Module designer: Dimitris Syrivelis
 // Backup: Christian Pinto, Michele Gazzetti
 
-`define ETH
+`define AURORA
 `define DEBUG
+`define INTF_INPUT
+
 
 `timescale 1ns / 10ps
 // ******************************************************************************************************************************
@@ -98,21 +100,48 @@ module thymesisflow_top  (
 
 );
 
-//for timing relax
-wire [199:0]     ocx_tlx_cmd_tdata_reg;
-wire             ocx_tlx_cmd_tvalid_reg;
-wire             ocx_tlx_cmd_tready_reg;
-
-axis_register_slice_25 ocx_tlx_cmd_tdata_reg (
-  .aclk(clock),                    // input wire aclk
-  .aresetn(reset_n),              // input wire aresetn
-  .m_axis_tvalid(ocx_tlx_cmd_tvalid),  // input wire s_axis_tvalid
-  .m_axis_tready(ocx_tlx_cmd_tready),  // output wire s_axis_tready
-  .m_axis_tdata(ocx_tlx_cmd_tdata),    // input wire [199 : 0] s_axis_tdata
-  .s_axis_tvalid(ocx_tlx_cmd_tvalid_reg),  // output wire m_axis_tvalid
-  .s_axis_tready(ocx_tlx_cmd_tready_reg),  // input wire m_axis_tready
-  .s_axis_tdata(ocx_tlx_cmd_tdata_reg)    // output wire [199 : 0] m_axis_tdata
+`ifdef INTF_INPUT
+ila_163 ila_ocx_tlx_cmd_flit_in(
+.clk(clock),
+.probe0(ocx_tlx_cmd_flit_in_tdata),
+.probe1(ocx_tlx_cmd_flit_in_tvalid),
+.probe2(ocx_tlx_cmd_flit_in_tready)
 );
+
+ila_513 ila_ocx_tlx_cmddata_flit_in(
+.clk(clock),
+.probe0(ocx_tlx_cmddata_flit_in_tdata),
+.probe1(ocx_tlx_cmddata_flit_in_tvalid),
+.probe2(ocx_tlx_cmddata_flit_in_tready)
+);
+
+ila_40 ila_tl_resp(
+.clk(clock),
+.probe0(ocx_tl_resp_tdata),
+.probe1(ocx_tl_resp_tready),
+.probe2(ocx_tl_resp_tvalid)
+);
+
+ila_520 ila_ocx_tl_resp_data_tdata(
+.clk(clock),
+.probe0(ocx_tl_resp_data_tdata),
+.probe1(ocx_tl_resp_data_tvalid),
+.probe2(ocx_tl_resp_data_tready)
+);
+
+ila_12 ila_active_actag(
+.clk(clock),
+.probe0(active_actag)
+);
+
+ila_36 ila_rty_timeout(
+.clk(clock),
+.probe0(active_actag)
+);
+
+
+`endif 
+
 
 
 
@@ -137,20 +166,6 @@ ila_512 ila_TF_COMPUTE_ROUTING_EGR(
 .probe0(ocx_compute_netflit_out_tdata),
 .probe1(ocx_compute_netflit_out_tvalid),
 .probe2(ocx_compute_netflit_out_tready)
-);
-
-ila_256 ila_ocx_tlx_cmd_flit_in(
-.clk(clock),
-.probe0(ocx_tlx_cmd_flit_in_tdata),
-.probe1(ocx_tlx_cmd_flit_in_tvalid),
-.probe2(ocx_tlx_cmd_flit_in_tready)
-);
-
-ila_512 ila_ocx_tlx_cmddata_flit_in(
-.clk(clock),
-.probe0(ocx_tlx_cmddata_flit_in_tdata),
-.probe1(ocx_tlx_cmddata_flit_in_tvalid),
-.probe2(ocx_tlx_cmddata_flit_in_tready)
 );
 
 ila_512 ila_ocx_tlx_resp(
@@ -588,6 +603,21 @@ thymesisflow_rr_arbiter#(.SIZE(2))  TF_COMPUTE_RR_ARB_INGR
 wire [519:0]     ocx_tlx_data_tdata_reg;
 wire             ocx_tlx_data_tvalid_reg;
 wire             ocx_tlx_data_tready_reg;
+//for timing relax
+wire [199:0]     ocx_tlx_cmd_tdata_reg;
+wire             ocx_tlx_cmd_tvalid_reg;
+wire             ocx_tlx_cmd_tready_reg;
+
+axis_register_slice_25 ocx_tlx_cmd_tdata_reg (
+  .aclk(clock),                    // input wire aclk
+  .aresetn(reset_n),              // input wire aresetn
+  .m_axis_tvalid(ocx_tlx_cmd_tvalid),  // input wire s_axis_tvalid
+  .m_axis_tready(ocx_tlx_cmd_tready),  // output wire s_axis_tready
+  .m_axis_tdata(ocx_tlx_cmd_tdata),    // input wire [199 : 0] s_axis_tdata
+  .s_axis_tvalid(ocx_tlx_cmd_tvalid_reg),  // output wire m_axis_tvalid
+  .s_axis_tready(ocx_tlx_cmd_tready_reg),  // input wire m_axis_tready
+  .s_axis_tdata(ocx_tlx_cmd_tdata_reg)    // output wire [199 : 0] m_axis_tdata
+);
 
 axis_register_slice_0 ocx_tlx_data_reg (
   .aclk(clock),                    // input wire aclk
@@ -703,13 +733,6 @@ ila_256 ila_tl_fifo_resp_out(
 .probe0(memory_egress_tl_fifo_resp_out_tdata),
 .probe1(memory_egress_tl_fifo_resp_out_tvalid),
 .probe2(memory_egress_tl_fifo_resp_out_tready)
-);
-
-ila_40 ila_tl_resp(
-.clk(clock),
-.probe0(ocx_tl_resp_tdata),
-.probe1(ocx_tl_resp_tready),
-.probe2(ocx_tl_resp_tvalid)
 );
 
 
